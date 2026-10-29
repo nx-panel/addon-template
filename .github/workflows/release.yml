@@ -21,9 +21,9 @@ jobs:
         id: version
         run: |
           want="${GITHUB_REF_NAME#v}"
-          have="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' nexora-addon.json | head -n 1)"
-          [ "$want" = "$have" ] || { echo "nexora-addon.json says $have, the tag is $want"; exit 1; }
-          go run github.com/nexora-vpn/addon-kit/cmd/nexora-addon check nexora-addon.json
+          have="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' nx-addon.json | head -n 1)"
+          [ "$want" = "$have" ] || { echo "nx-addon.json says $have, the tag is $want"; exit 1; }
+          go run github.com/nx-panel/addon-kit/cmd/nx-addon check nx-addon.json
           echo "version=$want" >> "$GITHUB_OUTPUT"
       - name: binaries
         run: |
@@ -32,7 +32,7 @@ jobs:
             CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags "-s -w" -o addon-template .
             tar -czf "dist/addon-template-linux-${arch}.tar.gz" addon-template
           done
-          cp nexora-addon.json install.sh dist/
+          cp nx-addon.json install.sh dist/
           (cd dist && sha256sum * > SHA256SUMS)
       - name: release
         env:
@@ -51,5 +51,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/nexora-vpn/addon-template:${{ steps.version.outputs.version }}
-            ghcr.io/nexora-vpn/addon-template:latest
+            ghcr.io/nx-panel/addon-template:${{ steps.version.outputs.version }}
+            ghcr.io/nx-panel/addon-template:latest

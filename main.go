@@ -1,16 +1,16 @@
-// Command addon-template is a minimal Nexora addon: it registers with a panel
+// Command addon-template is a minimal NX addon: it registers with a panel
 // by claim code, receives the panel's signed events, answers the health
 // check, and shows a page — everything an addon needs before it does
 // anything of its own. Copy it, rename the slug, and build from here.
 //
 // Configuration comes from the environment, the way the install passes it:
 //
-//	NEXORA_CLAIM_CODE   the one-time code the panel registers with (drawn and logged when absent)
-//	NEXORA_OPT_PORT     the port to listen on (install option "port")
-//	NEXORA_OPT_TITLE    the page title (install option "title")
-//	NEXORA_OPT_COUNT_USERS  "true" to show the panel's account count
-//	NEXORA_DATA_DIR     where the credentials are kept (default ./data)
-//	NEXORA_MANIFEST_FILE  a manifest to serve instead of the built-in one (a signed copy, say)
+//	NX_CLAIM_CODE   the one-time code the panel registers with (drawn and logged when absent)
+//	NX_OPT_PORT     the port to listen on (install option "port")
+//	NX_OPT_TITLE    the page title (install option "title")
+//	NX_OPT_COUNT_USERS  "true" to show the panel's account count
+//	NX_DATA_DIR     where the credentials are kept (default ./data)
+//	NX_MANIFEST_FILE  a manifest to serve instead of the built-in one (a signed copy, say)
 package main
 
 import (
@@ -24,22 +24,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nexora-vpn/addon-kit/addon"
-	"github.com/nexora-vpn/addon-kit/panel"
+	"github.com/nx-panel/addon-kit/addon"
+	"github.com/nx-panel/addon-kit/panel"
 )
 
-//go:embed nexora-addon.json
+//go:embed nx-addon.json
 var builtinManifest []byte
 
 func main() {
 	raw := builtinManifest
-	if path := os.Getenv("NEXORA_MANIFEST_FILE"); path != "" {
+	if path := os.Getenv("NX_MANIFEST_FILE"); path != "" {
 		var err error
 		if raw, err = os.ReadFile(path); err != nil {
-			log.Fatalf("NEXORA_MANIFEST_FILE: %v", err)
+			log.Fatalf("NX_MANIFEST_FILE: %v", err)
 		}
 	}
-	dataDir := os.Getenv("NEXORA_DATA_DIR")
+	dataDir := os.Getenv("NX_DATA_DIR")
 	if dataDir == "" {
 		dataDir = "data"
 	}
@@ -72,7 +72,7 @@ func main() {
 	mux := http.NewServeMux()
 	a.Mount(mux)
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		view := pageView{Title: option("title", "Hello from a Nexora addon"), ClaimCode: a.ClaimCode()}
+		view := pageView{Title: option("title", "Hello from an NX addon"), ClaimCode: a.ClaimCode()}
 		if c := a.Credentials(); c != nil {
 			view.Panel = c.Panel.URL
 			view.Version = c.Panel.Version

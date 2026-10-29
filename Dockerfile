@@ -9,7 +9,7 @@ FROM alpine:3.24
 RUN apk add --no-cache ca-certificates && adduser -D -H -u 10001 addon && mkdir /data && chown addon /data
 COPY --from=build /out/addon-template /usr/local/bin/addon-template
 USER addon
-ENV NEXORA_DATA_DIR=/data
+ENV NX_DATA_DIR=/data
 VOLUME /data
 EXPOSE 8090
 ENTRYPOINT ["/usr/local/bin/addon-template"]

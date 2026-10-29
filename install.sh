@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installs, updates or removes this Nexora addon on a Linux host — by hand, or
+# Installs, updates or removes this NX addon on a Linux host — by hand, or
 # by the panel over SSH (the same way it installs a node). Run it as root.
 #
 #   sh install.sh --method docker --opt port=8090 --panel-url https://panel.example --claim-code ABC123
@@ -13,7 +13,7 @@
 # --sha256 HEX      the archive's SHA-256, checked before it is installed: the
 #                   panel hands it from the release's signed SHA256SUMS
 # --opt KEY=VALUE   an answer to one of the manifest's install options; repeat
-# --panel-url URL   the panel's address, passed as NEXORA_PANEL_URL
+# --panel-url URL   the panel's address, passed as NX_PANEL_URL
 # --claim-code C    the one-time code the panel registers the addon with
 # --uninstall       stop and remove the addon; --purge also deletes its data
 #
@@ -22,10 +22,10 @@
 set -eu
 
 SLUG="template"
-REPO="Nexora-VPN/addon-template"
+REPO="nx-panel/addon-template"
 BIN="addon-template"
-DIR="/opt/nexora-addons/${SLUG}"
-UNIT="nexora-addon-${SLUG}"
+DIR="/opt/nx-addons/${SLUG}"
+UNIT="nx-addon-${SLUG}"
 
 METHOD=""
 VERSION=""
@@ -59,6 +59,38 @@ while [ $# -gt 0 ]; do
 done
 
 [ "$(id -u)" = 0 ] || die "run as root"
+
+# An install made under the product's old name is moved first: its unit or
+# its containers are stopped, its directory moves to ${DIR} with its answers
+# and data, and the answers take their new names. The run then goes on as an
+# update, and the panel's claim code registers it again. Each step looks
+# before it acts, so a run cut off halfway is finished by the next one.
+OLD_DIR="/opt/nexora-addons/${SLUG}" # rebrand-ok
+OLD_UNIT="nexora-addon-${SLUG}"      # rebrand-ok
+OLD_BIN="${BIN}"
+if [ -e "$OLD_DIR" ] || [ -f "/etc/systemd/system/${OLD_UNIT}.service" ]; then
+	echo "moving ${SLUG} installed under the old name"
+	if [ -f "/etc/systemd/system/${OLD_UNIT}.service" ]; then
+		systemctl disable --now "$OLD_UNIT" 2>/dev/null || true
+	fi
+	if [ -f "${OLD_DIR}/compose.yml" ] && command -v docker >/dev/null 2>&1; then
+		docker compose -f "${OLD_DIR}/compose.yml" --env-file "${OLD_DIR}/.env" down || true
+	fi
+	if [ -e "$OLD_DIR" ]; then
+		mkdir -p "$(dirname "$DIR")"
+		if [ -e "$DIR" ]; then
+			cp -a -n "${OLD_DIR}/." "${DIR}/" && rm -rf "${OLD_DIR:?}"
+		else
+			mv "$OLD_DIR" "$DIR"
+		fi
+	fi
+	if [ -f "${DIR}/.env" ]; then
+		sed -i "s#^NEXORA_#NX_#; s#${OLD_DIR}#${DIR}#g" "${DIR}/.env" # rebrand-ok
+	fi
+	rm -f "/etc/systemd/system/${OLD_UNIT:?}.service" "${DIR:?}/bin/${OLD_BIN:?}" "${DIR:?}/compose.yml"
+	systemctl daemon-reload 2>/dev/null || true
+	rmdir "$(dirname "$OLD_DIR")" 2>/dev/null || true
+fi
 
 if [ "$UNINSTALL" = 1 ]; then
 	if [ -f "/etc/systemd/system/${UNIT}.service" ]; then
@@ -126,11 +158,11 @@ setenv() {
 printf '%s' "$OPTS" | while IFS= read -r kv; do
 	[ -n "$kv" ] || continue
 	key="$(printf '%s' "${kv%%=*}" | tr 'a-z' 'A-Z')"
-	setenv "NEXORA_OPT_${key}" "${kv#*=}"
+	setenv "NX_OPT_${key}" "${kv#*=}"
 done
-[ -z "$PANEL_URL" ] || setenv NEXORA_PANEL_URL "$PANEL_URL"
-[ -z "$CLAIM_CODE" ] || setenv NEXORA_CLAIM_CODE "$CLAIM_CODE"
-setenv NEXORA_ADDON_VERSION "${VERSION#v}"
+[ -z "$PANEL_URL" ] || setenv NX_PANEL_URL "$PANEL_URL"
+[ -z "$CLAIM_CODE" ] || setenv NX_CLAIM_CODE "$CLAIM_CODE"
+setenv NX_ADDON_VERSION "${VERSION#v}"
 
 case "$METHOD" in
 script)
@@ -139,7 +171,7 @@ script)
 	aarch64 | arm64) ARCH=arm64 ;;
 	*) die "no build of ${SLUG} for $(uname -m)" ;;
 	esac
-	setenv NEXORA_DATA_DIR "${DIR}/data"
+	setenv NX_DATA_DIR "${DIR}/data"
 	tmp="$(mktemp -d)"
 	trap 'rm -rf "$tmp"' EXIT
 	if [ -n "$BINARY_FILE" ]; then
@@ -161,7 +193,7 @@ script)
 	install -m 755 "${tmp}/${BIN}" "${DIR}/bin/${BIN}"
 	cat >"/etc/systemd/system/${UNIT}.service" <<UNIT
 [Unit]
-Description=Nexora addon ${SLUG}
+Description=NX addon ${SLUG}
 After=network-online.target
 Wants=network-online.target
 

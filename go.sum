@@ -1,5 +1,5 @@
-github.com/nexora-vpn/addon-kit v0.4.5 h1:WRsQ8c4tzQ4H9unjb04PtnKY1zuhnEDqGbbJFXmu0q4=
-github.com/nexora-vpn/addon-kit v0.4.5/go.mod h1:V0hvZyfz8I6YVtPbDq6yYJjH+hTRmzlOk4r8T6UtPBk=
+github.com/nx-panel/addon-kit v0.5.0 h1:glDp96Qb3a5Cl08BGQjTEugWEE9o5mt8AAAqhfpHcDI=
+github.com/nx-panel/addon-kit v0.5.0/go.mod h1:XjyrXUhxTxhgOBGEP+4KJNn0jt9zwlkP7h1/caHcopk=
 golang.org/x/crypto v0.58.0 h1:COkYLr4k7nDI4r6QtMML2AfzeIswWHAJthLS6K/M/54=
 golang.org/x/crypto v0.58.0/go.mod h1:Xh+kl5A+M0gMiWDytH2Hhr5Z7WbNCpv/eB/EFgfSk+w=
 golang.org/x/mod v0.42.0 h1:ICeL3t2L30ljSPHHxDnR4fqVcBt/zR2zJAb9juavmQg=
