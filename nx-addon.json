@@ -11,26 +11,59 @@
   },
   "docs": "https://github.com/nx-panel/addon-template",
   "install": {
-    "docker": { "image": "ghcr.io/nx-panel/addon-template", "compose": "deploy/compose.yml" },
+    "docker": {
+      "image": "ghcr.io/nx-panel/addon-template",
+      "compose": "deploy/compose.yml"
+    },
     "binary": {
       "linux-amd64": "addon-template-linux-amd64.tar.gz",
       "linux-arm64": "addon-template-linux-arm64.tar.gz"
     },
     "options": [
-      { "key": "port", "type": "port", "default": 8090,
-        "label": { "en": "Port", "fa": "پورت" } },
-      { "key": "title", "type": "string", "default": "Hello from an NX addon",
-        "label": { "en": "Page title", "fa": "عنوان صفحه" } },
-      { "key": "count_users", "type": "bool", "default": true,
-        "label": { "en": "Show the panel's account count", "fa": "نمایش تعداد حساب‌های پنل" } }
+      {
+        "key": "port",
+        "type": "port",
+        "default": 8090,
+        "label": {
+          "en": "Port",
+          "fa": "پورت"
+        }
+      },
+      {
+        "key": "title",
+        "type": "string",
+        "default": "Hello from an NX addon",
+        "label": {
+          "en": "Page title",
+          "fa": "عنوان صفحه"
+        }
+      },
+      {
+        "key": "count_users",
+        "type": "bool",
+        "default": true,
+        "label": {
+          "en": "Show the panel's account count",
+          "fa": "نمایش تعداد حساب‌های پنل"
+        }
+      }
     ]
   },
   "scopes": [
-    { "scope": "users:read", "purpose": "to show how many accounts the panel has" }
+    {
+      "scope": "users:read",
+      "purpose": "to show how many accounts the panel has"
+    }
   ],
-  "events": ["user.created", "panel.addon_removed"],
+  "events": [
+    "user.created",
+    "panel.addon_removed"
+  ],
   "webhook": "/nx/events",
   "setup": "/nx/setup",
   "health": "/health",
-  "ui": "/"
+  "ui": "/",
+  "requires": {
+    "panel": ">=0.1.0"
+  }
 }
