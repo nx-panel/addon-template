@@ -79,7 +79,7 @@ if [ -e "$OLD_DIR" ] || [ -f "/etc/systemd/system/${OLD_UNIT}.service" ]; then
 	if [ -e "$OLD_DIR" ]; then
 		mkdir -p "$(dirname "$DIR")"
 		if [ -e "$DIR" ]; then
-			cp -a -n "${OLD_DIR}/." "${DIR}/" && rm -rf "${OLD_DIR:?}"
+			cp -a "${OLD_DIR}/." "${DIR}/" && rm -rf "${OLD_DIR:?}"
 		else
 			mv "$OLD_DIR" "$DIR"
 		fi
