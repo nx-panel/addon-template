@@ -286,3 +286,6 @@ if [ "$MOVED" = 1 ]; then
 	MOVED=0
 	rm -f "$MARK" "$SNAP"
 fi
+# The registration files the old kit kept beside the data; this kit writes
+# nx-credentials.json and nx-claim, so they are left from the old name only.
+rm -f "${DIR}/data/nexora-credentials.json" "${DIR}/data/nexora-claim" # rebrand-ok
