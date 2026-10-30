@@ -68,7 +68,49 @@ done
 OLD_DIR="/opt/nexora-addons/${SLUG}" # rebrand-ok
 OLD_UNIT="nexora-addon-${SLUG}"      # rebrand-ok
 OLD_BIN="${BIN}"
-if [ -e "$OLD_DIR" ] || [ -f "/etc/systemd/system/${OLD_UNIT}.service" ]; then
+# A snapshot of the old install is taken first, and a run that stops early
+# after the move — a die, or a command that failed under set -e — puts it back
+# and starts it again; the next run tries the move again. A run cut off before
+# it finished leaves its record (MARK), and the next one takes that snapshot,
+# which holds the install from before any of it was moved.
+MARK="$(dirname "$DIR")/.${SLUG}.transfer"
+SNAP=""
+MOVED=0
+DIR_BEFORE=0
+restore_move() {
+	[ "$MOVED" = 1 ] || return 0
+	MOVED=0
+	echo "install: putting ${SLUG} from before the move back" >&2
+	if [ -f "/etc/systemd/system/${UNIT}.service" ]; then
+		systemctl disable --now "$UNIT" 2>/dev/null || true
+		rm -f "/etc/systemd/system/${UNIT}.service"
+	fi
+	if [ -f "${DIR}/compose.yml" ] && command -v docker >/dev/null 2>&1; then
+		docker compose -f "${DIR}/compose.yml" --env-file "${DIR}/.env" down 2>/dev/null || true
+	fi
+	[ -n "$SNAP" ] || return 0
+	# An install already here before the move is left as it is.
+	[ "$DIR_BEFORE" = 1 ] || rm -rf "${DIR:?}"
+	tar -C / -xzf "$SNAP" || { echo "install: could not unpack ${SNAP}" >&2; return 0; }
+	rm -f "$MARK"
+	systemctl daemon-reload 2>/dev/null || true
+	if [ -f "/etc/systemd/system/${OLD_UNIT}.service" ]; then
+		systemctl enable --now "$OLD_UNIT" >/dev/null 2>&1 || true
+	elif [ -f "${OLD_DIR}/compose.yml" ] && command -v docker >/dev/null 2>&1; then
+		docker compose -f "${OLD_DIR}/compose.yml" --env-file "${OLD_DIR}/.env" up -d >/dev/null 2>&1 || true
+	fi
+	echo "install: ${SLUG} runs again under its old name" >&2
+}
+# One EXIT trap for the run: the files it leaves to clean up, then the restore.
+CLEANUP=""
+on_exit() {
+	rc=$?
+	# shellcheck disable=SC2086 # a list of paths without spaces
+	[ -z "$CLEANUP" ] || rm -rf $CLEANUP
+	[ "$rc" = 0 ] || restore_move
+}
+trap on_exit EXIT
+if [ -f "$MARK" ] || [ -e "$OLD_DIR" ] || [ -f "/etc/systemd/system/${OLD_UNIT}.service" ]; then
 	echo "moving ${SLUG} installed under the old name"
 	if [ -f "/etc/systemd/system/${OLD_UNIT}.service" ]; then
 		systemctl disable --now "$OLD_UNIT" 2>/dev/null || true
@@ -76,8 +118,25 @@ if [ -e "$OLD_DIR" ] || [ -f "/etc/systemd/system/${OLD_UNIT}.service" ]; then
 	if [ -f "${OLD_DIR}/compose.yml" ] && command -v docker >/dev/null 2>&1; then
 		docker compose -f "${OLD_DIR}/compose.yml" --env-file "${OLD_DIR}/.env" down || true
 	fi
+	mkdir -p "$(dirname "$DIR")"
+	if [ -f "$MARK" ]; then
+		SNAP="$(sed -n 1p "$MARK")"
+		DIR_BEFORE="$(sed -n 2p "$MARK")"
+		[ -f "$SNAP" ] || SNAP=""
+	elif [ -e "$DIR" ]; then
+		DIR_BEFORE=1
+	fi
+	if [ -z "$SNAP" ] && [ -e "$OLD_DIR" ]; then
+		# Taken with the old one stopped, and kept only whole: a cut-off
+		# archive would truncate what it puts back.
+		SNAP="$(dirname "$DIR")/.${SLUG}-transfer.tar.gz"
+		set -- "${OLD_DIR#/}"
+		[ ! -f "/etc/systemd/system/${OLD_UNIT}.service" ] || set -- "$@" "etc/systemd/system/${OLD_UNIT}.service"
+		(umask 077 && tar -C / -czf "$SNAP" "$@") || { rm -f "$SNAP"; die "could not save the old install; nothing was moved"; }
+	fi
+	(umask 077 && printf '%s\n%s\n' "$SNAP" "$DIR_BEFORE" >"$MARK")
+	MOVED=1
 	if [ -e "$OLD_DIR" ]; then
-		mkdir -p "$(dirname "$DIR")"
 		if [ -e "$DIR" ]; then
 			cp -a "${OLD_DIR}/." "${DIR}/" && rm -rf "${OLD_DIR:?}"
 		else
@@ -106,6 +165,7 @@ if [ "$UNINSTALL" = 1 ]; then
 	else
 		rm -rf "${DIR}/bin" "${DIR}/compose.yml"
 	fi
+	rm -f "$MARK" "$SNAP"
 	echo "removed ${SLUG}"
 	exit 0
 fi
@@ -173,7 +233,7 @@ script)
 	esac
 	setenv NX_DATA_DIR "${DIR}/data"
 	tmp="$(mktemp -d)"
-	trap 'rm -rf "$tmp"' EXIT
+	CLEANUP="${CLEANUP} ${tmp}"
 	if [ -n "$BINARY_FILE" ]; then
 		cp "$BINARY_FILE" "${tmp}/addon.tar.gz"
 	else
@@ -221,3 +281,8 @@ docker)
 esac
 
 echo "installed ${SLUG} ${VERSION} (${METHOD}) in ${DIR}"
+# The move is done once the new one runs: what only a restore needed goes.
+if [ "$MOVED" = 1 ]; then
+	MOVED=0
+	rm -f "$MARK" "$SNAP"
+fi
