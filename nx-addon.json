@@ -2,7 +2,7 @@
   "api": 1,
   "slug": "template",
   "name": "Addon template",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "NX",
   "license": "Apache-2.0",
   "description": {
