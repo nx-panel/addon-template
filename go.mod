@@ -1,7 +1,7 @@
 module github.com/nx-panel/addon-template
 
-go 1.27.3
+go 1.27.4
 
-require github.com/nx-panel/addon-kit v0.5.0
+require github.com/nx-panel/addon-kit v0.6.0
 
-require golang.org/x/mod v0.42.0 // indirect
+require golang.org/x/mod v0.43.0 // indirect
